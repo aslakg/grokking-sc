@@ -2,35 +2,16 @@
 
 module Core.Elmify
   ( elmify,
-    elmifys,
-    writeElmModule,
   )
 where
 
 import Control.Exception (bracket)
-import Core.Pretty
 import Core.Substitution
 import Core.Syntax
+import Data.Text.Prettyprint.Doc (backslash)
 import Fun.Syntax (BinOp (..), Ctor (..), Dtor (..))
 import Prettyprinter
 import Prettyprinter.Render.String
-
-writeElmModule :: FilePath -> [Doc ann] -> IO ()
-writeElmModule filePath defs = do
-  -- Define the preamble and the declaration
-  let preambles = ["module Elmified exposing (..)", "import Literal exposing (..)", "import MuMu exposing (..)", "import Unified exposing (..)"]
-      declaration = "code ="
-      code = vsep (punctuate comma defs)
-  -- Indent the core Elm code under the "code =" declaration
-
-  let fullContent = vsep $ preambles ++ [declaration, indent 2 $ brackets code]
-  -- Render `Doc` to `Text` and write to file
-  writeFile filePath (renderDoc fullContent)
-
-  putStrLn $ "Elm code has been written to " ++ filePath
-
-elmifys :: Program () -> [Doc ann]
-elmifys (MkProg defs) = (showDef <$> defs)
 
 elmify :: Program () -> Doc ann
 elmify (MkProg defs) = vcat (showDef <$> defs)
@@ -41,22 +22,35 @@ elmify (MkProg defs) = vcat (showDef <$> defs)
 params :: (a -> Doc ann) -> [a] -> Doc ann
 params f x =
   --   brackets (punctuate comma (map f x))
-  brackets (hsep (punctuate comma (map (f) x)))
+  brackets (hsep (punctuate comma (map f x)))
 
-paramsq f x =
+paramsn f x =
   --   brackets (punctuate comma (map f x))
-  brackets (hsep (punctuate comma (map (dquotes . f) x)))
+  brackets (hsep (punctuate comma (map (\o -> f o <> "n") x)))
 
-showDef :: Def b -> Doc ann
-showDef (Def name pargs cargs body) =
+showDef1 :: Def b -> Doc ann
+showDef1 (Def name pargs cargs body) =
   let args x =
-        hsep (punctuate comma (dquotes . pretty . fst <$> x))
+        hsep (punctuate comma (pretty . fst <$> x))
    in -- pretty name <+> "= " <>
       "Def "
         <> dquotes (pretty name)
         <+> brackets (args pargs)
         <+> brackets (args cargs)
         <+> "<|"
+        <+> softline
+        <+> showStatement body
+
+showDef :: Def b -> Doc ann
+showDef (Def name pargs cargs body) =
+  let args x =
+        hsep (punctuate " " (pretty . fst <$> x))
+   in -- pretty name <+> "= " <>
+      "def_"
+        <> (pretty name)
+        <+> (args pargs)
+        <+> (args cargs)
+        <+> " = "
         <+> softline
         <+> showStatement body
 
@@ -77,15 +71,15 @@ showOp Prod = "*"
 showOp Sum = "+"
 showOp Sub = "-"
 
-qpretty v = dquotes (pretty v)
-
 showP :: Producer -> Doc ann
 showP p = parens $
   case p of
-    Var v -> "PVar" <+> dquotes (pretty v)
+    -- Var v -> "PVar" <+> dquotes (pretty v)
+    Var v -> (pretty v)
     Lit n -> "Literal (IntNum " <> pretty n <> ")"
-    MuDyn v s -> "PMu" <+> qpretty v <+> showS s
-    Mu v s -> "PMu" <+> qpretty v <+> showS s
+    -- MuDyn v s -> "Mu" <+> pretty v <+> showS s
+    MuDyn v s -> "pmu" <+> dquotes (pretty v) <+> parens (backslash <> pretty v <+> "->" <+> showS s)
+    Mu v s -> "pmu" <+> dquotes (pretty v) <+> parens (backslash <> pretty v <+> "->" <+> showS s)
     Constructor ct pargs cargs -> "Constructor" <+> (showCtor ct) <+> params showP pargs <+> params showC cargs
     Cocase patterns -> "CoCase" <+> params (showPattern showCtor) patterns
 
@@ -98,17 +92,36 @@ showC :: Consumer -> Doc ann
 showC c =
   parens $
     case c of
-      Covar v -> "CVar" <+> dquotes (pretty v)
-      MuTilde v s -> "CMu" <+> qpretty v <+> showS s
-      MuTildeDyn v s -> "CMu" <+> qpretty v <+> showS s
+      -- Covar v -> "CVar" <+> dquotes (pretty v)
+      Covar v -> (pretty v)
+      -- MuTilde v s -> "CMu" <+> pretty v <+> showS s
+      -- MuTildeDyn v s -> "CMu" <+> pretty v <+> showS s
+      MuTildeDyn v s -> "cmu" <+> dquotes (pretty v) <+> parens (backslash <> pretty v <+> "->" <+> showS s)
+      MuTilde v s -> "cmu" <+> dquotes (pretty v) <+> parens (backslash <> pretty v <+> "->" <+> showS s)
       Case patterns -> "Case" <+> params (showPattern showCtor) patterns
       Destructor ct pargs cargs -> "Destructor" <+> (showCtor ct) <+> params showP pargs <+> params showC cargs
 
 --   _ ->
 --     pretty (show c)
 
+showPattern1 :: (a -> Doc ann) -> Pattern a -> Doc ann
+showPattern1 f (MkPattern {xtor = nm, patv = vars, patcv = covars, patst = st}) =
+  parens $ f nm <+> comma <+> params pretty vars <+> comma <+> params pretty covars <+> comma <+> (showS st)
+
 showPattern :: (a -> Doc ann) -> Pattern a -> Doc ann
 showPattern f (MkPattern {xtor = nm, patv = vars, patcv = covars, patst = st}) =
-  parens $ f nm <+> comma <+> paramsq pretty vars <+> comma <+> paramsq pretty covars <+> comma <+> (showS st)
+  let inner = parens (f nm <+> comma <+> paramsn pretty vars <+> comma <+> paramsn pretty (covars) <+> comma <+> (showS st))
+   in bindWrapP vars covars inner
+
+addn vars = map (\x -> x ++ "n") vars
+
+bindWrapP [] covars inner =
+  bindWrapC covars inner
+bindWrapP (x : xs) covars inner =
+  "mkBindP" <+> parens (backslash <> pretty x <> "n" <+> pretty x <+> "->" <+> bindWrapP xs covars inner)
+
+bindWrapC [] inner = inner
+bindWrapC (x : xs) inner =
+  "mkBindC" <+> parens (backslash <> pretty x <> "n" <+> pretty x <+> "->" <+> bindWrapC xs inner)
 
 showCtor c = dquotes $ pretty (show c)

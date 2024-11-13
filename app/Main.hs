@@ -38,6 +38,9 @@ dispatch [fp] = do
   let compiled = C.compileProgram prog
   putStrLn $ colorTarget <> "---------- Result of Compilation --------" <> colorDefault
   putStrLn (render compiled)
+  let elmifiedu = E.elmify compiled
+  putStrLn $ colorTarget <> "---------- Elm code unfocused --------" <> colorDefault
+  putStrLn (renderDoc elmifiedu)
 
   let focused = focus compiled
   putStrLn $ colorTarget <> "---------- Result of Focusing --------" <> colorDefault
@@ -48,8 +51,12 @@ dispatch [fp] = do
   putStrLn (render simplified)
 
   let elmified = E.elmify simplified
+      elmdefs = E.elmifys simplified
+
   putStrLn $ colorTarget <> "---------- Elm code --------" <> colorDefault
   putStrLn (renderDoc elmified)
+  E.writeElmModule "Elmified.elm" elmdefs
+
   let result = evalMain simplified
   case result of
     Nothing -> do
