@@ -7,13 +7,10 @@ module Core.Elmify
   )
 where
 
-import Control.Exception (bracket)
 import Core.Pretty
-import Core.Substitution
 import Core.Syntax
-import Fun.Syntax (BinOp (..), Ctor (..), Dtor (..))
+import Fun.Syntax (BinOp (..))
 import Prettyprinter
-import Prettyprinter.Render.String
 
 writeElmModule :: FilePath -> [Doc ann] -> IO ()
 writeElmModule filePath defs = do
@@ -43,6 +40,7 @@ params f x =
   --   brackets (punctuate comma (map f x))
   brackets (hsep (punctuate comma (map (f) x)))
 
+paramsq :: (a -> Doc ann) -> [a] -> Doc ann
 paramsq f x =
   --   brackets (punctuate comma (map f x))
   brackets (hsep (punctuate comma (map (dquotes . f) x)))
@@ -77,6 +75,7 @@ showOp Prod = "*"
 showOp Sum = "+"
 showOp Sub = "-"
 
+qpretty :: (Pretty a) => a -> Doc ann
 qpretty v = dquotes (pretty v)
 
 showP :: Producer -> Doc ann
@@ -111,4 +110,5 @@ showPattern :: (a -> Doc ann) -> Pattern a -> Doc ann
 showPattern f (MkPattern {xtor = nm, patv = vars, patcv = covars, patst = st}) =
   parens $ f nm <+> comma <+> paramsq pretty vars <+> comma <+> paramsq pretty covars <+> comma <+> (showS st)
 
+showCtor :: (Show a) => a -> Doc ann
 showCtor c = dquotes $ pretty (show c)

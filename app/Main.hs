@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Main (main) where
 
 import Compiler qualified as C
@@ -70,10 +72,12 @@ dispatch _ = putStrLn "Please invoke the program with a filepath"
 printTrace :: [Core.Statement] -> IO ()
 printTrace xs = go (zip xs [(0 :: Integer) ..])
   where
-    go [] = pure ()
-    go ((s, i) : rest) = do
-      putStrLn (show i <> ": " <> render s)
-      go rest
+    go = \case
+      [] -> pure ()
+      ((s, i) : rest) ->
+        do
+          putStrLn (show i <> ": " <> render s)
+          go rest
 
 readAndParse :: FilePath -> IO (Program ())
 readAndParse fp = do
