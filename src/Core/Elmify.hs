@@ -4,6 +4,7 @@ module Core.Elmify
   ( elmify,
     elmifys,
     writeElmModule,
+    showStatement,
   )
 where
 

@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Compiler qualified as C
+import Core.Elmify (showStatement)
 import Core.Elmify qualified as E
 import Core.Eval
 import Core.Focusing
@@ -65,6 +66,9 @@ dispatch [fp] = do
       putStrLn "Main not found"
       exitFailure
     Just res -> do
+      -- At this point, res is [Statement], so we could print out Elm tests actually, to verify that Elm reduces in the same way
+      putStrLn $ colorTarget <> "---------- Elm evaluation tests --------" <> colorDefault
+      elmTrace res
       putStrLn $ colorTarget <> "---------- Result of Evaluation --------" <> colorDefault
       printTrace res
 dispatch _ = putStrLn "Please invoke the program with a filepath"
@@ -77,6 +81,16 @@ printTrace xs = go (zip xs [(0 :: Integer) ..])
       ((s, i) : rest) ->
         do
           putStrLn (show i <> ": " <> render s)
+          go rest
+
+elmTrace :: [Core.Statement] -> IO ()
+elmTrace xs = go (zip xs [(0 :: Integer) ..])
+  where
+    go = \case
+      [] -> pure ()
+      ((s, i) : rest) ->
+        do
+          putStrLn (show i <> ": " <> show (showStatement s))
           go rest
 
 readAndParse :: FilePath -> IO (Program ())
