@@ -10,6 +10,7 @@ import Core.Focusing
 import Core.Pretty (render, renderDoc)
 import Core.Simplify
 import Core.Syntax qualified as Core
+import Core.TryABT
 import Data.Text.IO qualified as T
 import Fun.Parser
 import Fun.Syntax
@@ -55,10 +56,10 @@ dispatch [fp] = do
 
   let elmified = E.elmify simplified
       elmdefs = E.elmifys simplified
-
+      unfocusedDefs = E.elmifys compiled
   putStrLn $ colorTarget <> "---------- Elm code --------" <> colorDefault
   putStrLn (renderDoc elmified)
-  E.writeElmModule "Elmified.elm" elmdefs
+  E.writeElmModule "Elmified.elm" elmdefs unfocusedDefs
 
   let result = evalMain simplified
   case result of
@@ -71,6 +72,7 @@ dispatch [fp] = do
       elmTrace res
       putStrLn $ colorTarget <> "---------- Result of Evaluation --------" <> colorDefault
       printTrace res
+  putStrLn $ "foo2:" <> show foo2
 dispatch _ = putStrLn "Please invoke the program with a filepath"
 
 printTrace :: [Core.Statement] -> IO ()

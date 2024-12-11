@@ -12,16 +12,32 @@ import Core.Pretty
 import Core.Syntax
 import Fun.Syntax (BinOp (..))
 import Prettyprinter
+  ( Doc,
+    Pretty (pretty),
+    brackets,
+    comma,
+    dquotes,
+    hsep,
+    indent,
+    parens,
+    punctuate,
+    softline,
+    vcat,
+    vsep,
+    (<+>),
+  )
 
-writeElmModule :: FilePath -> [Doc ann] -> IO ()
-writeElmModule filePath defs = do
+writeElmModule :: FilePath -> [Doc ann] -> [Doc ann] -> IO ()
+writeElmModule filePath defs unfocused = do
   -- Define the preamble and the declaration
   let preambles = ["module Elmified exposing (..)", "import Literal exposing (..)", "import MuMu exposing (..)", "import Unified exposing (..)"]
       declaration = "code ="
       code = vsep (punctuate comma defs)
+      unfocusedDec = "unfocused = "
+      unfocusedCode = vsep (punctuate comma unfocused)
   -- Indent the core Elm code under the "code =" declaration
 
-  let fullContent = vsep $ preambles ++ [declaration, indent 2 $ brackets code]
+  let fullContent = vsep $ preambles ++ [declaration, indent 2 $ brackets code, unfocusedDec, indent 2 $ brackets unfocusedCode]
   -- Render `Doc` to `Text` and write to file
   writeFile filePath (renderDoc fullContent)
 

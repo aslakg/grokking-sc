@@ -28,6 +28,8 @@ library
                       Core.Substitution
                       Core.Simplify
                       Core.Elmify
+                      Core.ABT
+                      Core.TryABT
                       Compiler
     build-depends:    base >= 4.17.0 && < 4.20,
                       containers >= 0.6 && < 0.8,
