@@ -14,7 +14,8 @@ import Prettyprinter
 import Prettyprinter.Render.String
 
 doublerightarrow :: Doc ann
-doublerightarrow = "⇒"
+-- doublerightarrow = "⇒"
+doublerightarrow = "=>"
 
 instance Pretty Ctor where
   pretty Nil = "Nil"
@@ -22,11 +23,16 @@ instance Pretty Ctor where
   pretty Tup = "Tup"
 
 instance Pretty Dtor where
-  pretty Hd = "hd"
-  pretty Tl = "tl"
-  pretty Fst = "fst"
-  pretty Snd = "snd"
-  pretty Ap = "ap"
+  -- pretty Hd = "hd"
+  -- pretty Tl = "tl"
+  -- pretty Fst = "fst"
+  -- pretty Snd = "snd"
+  -- pretty Ap = "ap"
+  pretty Hd = "Hd"
+  pretty Tl = "Tl"
+  pretty Fst = "Fst"
+  pretty Snd = "Snd"
+  pretty Ap = "Ap"
 
 instance (Pretty a) => Pretty (Pattern a) where
   pretty MkPattern {xtor = nm, patv = [], patcv = [], patst = st} =
@@ -62,7 +68,8 @@ instance Pretty Consumer where
         )
 
 instance Pretty Statement where
-  pretty (Cut p c) = "〈" <+> pretty p <+> "|" <+> pretty c <+> "〉"
+  -- pretty (Cut p c) = "〈" <+> pretty p <+> "|" <+> pretty c <+> "〉"
+  pretty (Cut p c) = " <" <+> pretty p <+> "|" <+> pretty c <+> "> "
   pretty (Op p1 Prod p2 c) = "*" <> parens (pretty p1 <> comma <+> pretty p2 <> semi <+> pretty c)
   pretty (Op p1 Sum p2 c) = "+" <> parens (pretty p1 <> comma <+> pretty p2 <> semi <+> pretty c)
   pretty (Op p1 Sub p2 c) = "-" <> parens (pretty p1 <> comma <+> pretty p2 <> semi <+> pretty c)
